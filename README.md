@@ -4,19 +4,10 @@
 
 This is a Docker wrapper for an official 'OG' TAK server from [TAK Product Center](https://tak.gov/) intended for beginners. It will give you a turnkey TAK server with SSL which works with ATAK, iTAK, WinTAK.
 
-The key improvements are:
-
- - Automatic configuration.
- - Certificate generation.
- - Secure password generation.
- - Updates PostgreSQL 10 to PostgreSQL 14.
- - Updates Debian 8 to Debian 11.
 
 ## IMPORTANT: Download the Official TAK Release
 
 Before you can build this, you must download a **TAKSERVER-DOCKER-X.X-RELEASE**.
-
-The scripts in this repository **have not** been checked against the **HARDENED** Docker release (`TAKSERVER-DOCKER-HARDENED-X.X-RELEASE`), so please **DO NOT** use them with that version of TAK Server.
 
 Releases are now public at [https://tak.gov/products/tak-server](https://tak.gov/products/tak-server)
 
@@ -24,26 +15,26 @@ Please follow account registration process, and once completed go to the link ab
 
 The integrity of the release will be checked at setup against the MD5/SHA1 checksums in this repo. **THESE MUST MATCH**. If they do not match, **DO NOT** proceed unless you trust the release. 
 
+Old releases are a security risk as they contain known vulnerabilities. For more information, read the big red notices on tak.gov
+
 ![TAK release download](img/tak-server-download.jpg)
 
 ## TAK Server Release Checksums
 
-The size blew up after `4.6` due to `900GB` of DTED which was added to WebTAK.
-
 | Release Filename                      | Bytes       | MD5 Checksum                       | SHA1 Checksum                              |
 | ------------------------------------- | ----------- | ---------------------------------- | ------------------------------------------ |
-| `takserver-docker-4.6-RELEASE-26.zip` | `462381384` | `dc63cb315f950025707dbccf05bdf183` | `7ca58221b8d35d40df906144c5834e6d9fa85b47` |
-| `takserver-docker-4.7-RELEASE-4.zip`  | `759385093` | `5b011b74dd5f598fa21ce8d737e8b3e6` | `b688359659a05204202c21458132a64ec1ba0184` |
-| `takserver-docker-4.7-RELEASE-18.zip` | `759410768` | `44b6fa8d7795b56feda08ea7ab793a3e` | `cd56406d3539030ab9b9b3fbae08b56b352b9b53` |
-| `takserver-docker-4.7-RELEASE-20.zip` | `759389907` | `1cb0208c62d4551f1c3185d00a5fd8bf` | `f427ae3e860fddb8907047f157ada5764334c48d` |
-| `takserver-docker-4.8-RELEASE-31.zip` | `772606000` | `c07f01d74960287bfc7dc08ecd6cbc3a` | `387ea4f593763d3adcfda5128a89dda4fd82e937` |
+| `takserver-docker-5.2-RELEASE-30.zip`| `517MB` | `b691d1d7377790690e1e5ec0e4a29a56` | `98f13f9140470ee65351e3d25dec097603bfb582` |
+| `takserver-docker-5.2-RELEASE-43.zip`| `517MB` | `0a7398383253707dd7564afc88f29b3b` | `824d7b89fbe6377cb5570f50bb35e6e05c12b230` |
+| `takserver-docker-5.3-RELEASE-24.zip`| `527MB` | `e8a5dc855c4eb67d170bf689017516e8` | `1eaad8c4471392a96c60f56bc2d54f9f3b6d719e` |
+| `takserver-docker-5.3-RELEASE-30.zip`| `527MB` | `b24b5ae01aeac151565aa35a39899785` | `37c3a8f3c7626326504ab8047c42a0473961be24` |
+| `takserver-docker-5.4-RELEASE-19.zip` | `522MB` | `9e6f3e3b61f8677b491d6ed15baf1813` | `2f3ced9b3e81c448e401b995f64566e7b888b991` |
 
 ## Requirements
 
 - Debian-based operating system, such as Debian or Ubuntu
 - Docker with `compose` (https://docs.docker.com/engine/install/ubuntu/ or https://docs.docker.com/engine/install/debian/)
 - A TAK server release
-- 2GB memory
+- 4GB memory
 - Network connection
 - `unzip` and `netstat` utilities
 
@@ -62,6 +53,30 @@ sudo apt update
 sudo apt install net-tools unzip zip
 git clone https://github.com/Cloud-RF/tak-server.git
 cd tak-server
+```
+
+### Setup Docker's apt repository
+
+First, set up Docker's apt repository. These steps are already completed on the WarDragon. Open a terminal and run the following commands:
+
+```bash
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+# Install the Docker packages.
+# To install the latest version, run:
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
 
 ### Docker Security
@@ -227,9 +242,19 @@ You can find ready made data packages in the `tak/certs/files` directory. You ne
 
 This will add a server, certificates and a user account. You will still need to create this user with the matching name for example, `user1`, in your TAK server user management dashboard and assign them to a common group.
 
-### Transferring Your ZIP files Via HTTP
+## Federated TAK server
 
-If you like to live dangerously, you can run a script to serve the `.zip` files on TCP port `12345`, for example, http://0.0.0.0:12345. This launches a mini Python web server and serves the content of the `share` folder which will contain your certificates. Note that sharing certificates via insecure protocols is not secure. 
+If you would like to federate TAK servers you will need to exchange ca.pem files between servers to the fed-truststore.jks file located within tak/certs/files
+
+```bash
+keytool -importcert -file ca.pem -keystore tak-server/tak/certs/files/fed-truststore.jks -alias "tak"
+```
+
+### Transferring user certificates via HTTP
+
+You can run a script to serve the `.zip` files on TCP port `12345`, for example, http://0.0.0.0:12345. This launches a mini Python web server and serves the content of the `share` folder which will contain your certificates. Only do this on a trusted network as it is not encrypted.
+
+**Sharing certificates via insecure protocols is not recommended best practice. For a secure method, copy it to the SD card with a USB cable**
 
 ```console
 ./scripts/shareCerts.sh
@@ -238,7 +263,7 @@ Serving HTTP on 0.0.0.0 port 12345 (http://0.0.0.0:12345/) ...
 10.0.0.5 - - [23/Nov/2022 15:49:54] "GET /user1-10.0.0.3.dp.zip HTTP/1.1" 200 
 ```
 
-Stop the script with `Ctrl-C` once done to stop randoms fetching your certificates.
+Stop the script with `Ctrl-C` once transferred to close the server.
 
 # FAQ
 
